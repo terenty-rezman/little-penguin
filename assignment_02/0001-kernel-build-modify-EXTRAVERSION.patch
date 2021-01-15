@@ -1,0 +1,29 @@
+From d30704298edd87b9db36f1b4fe80c99fe9e9dc7e Mon Sep 17 00:00:00 2001
+From: Malone Apryl <mapryl@student.21-school.ru>
+Date: Sat, 9 Jan 2021 19:54:34 +0000
+Subject: [PATCH] kernel build: modify EXTRAVERSION
+
+Change the EXTRAVERSION field in Makefile to append "-thor_kernel"
+string
+
+Signed-off-by: Malone Apryl <mapryl@student.21-school.ru>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 8b2c3f88ee5e..d956ec8780be 100644
+--- a/Makefile
++++ b/Makefile
+@@ -2,7 +2,7 @@
+ VERSION = 5
+ PATCHLEVEL = 11
+ SUBLEVEL = 0
+-EXTRAVERSION = -rc2
++EXTRAVERSION = -rc2-thor_kernel
+ NAME = Kleptomaniac Octopus
+ 
+ # *DOCUMENTATION*
+-- 
+2.30.0
+

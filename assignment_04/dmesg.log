@@ -1,0 +1,8 @@
+[  947.492853] usb 1-2: new low-speed USB device number 5 using ohci-pci
+[  947.740874] usb 1-2: New USB device found, idVendor=04f3, idProduct=0103
+[  947.747595] usb 1-2: New USB device strings: Mfr=0, Product=0, SerialNumber=0
+[  947.775358] input: HID 04f3:0103 as /devices/pci0000:00/0000:00:06.0/usb1/1-2/1-2:1.0/0003:04F3:0103.0006/input/input11
+[  947.782437] hid-generic 0003:04F3:0103.0006: input,hidraw1: USB HID v1.11 Keyboard [HID 04f3:0103] on usb-0000:00:06.0-2/input0
+[  947.815281] input: HID 04f3:0103 as /devices/pci0000:00/0000:00:06.0/usb1/1-2/1-2:1.1/0003:04F3:0103.0007/input/input12
+[  947.823959] hid-generic 0003:04F3:0103.0007: input,hidraw2: USB HID v1.11 Device [HID 04f3:0103] on usb-0000:00:06.0-2/input1
+[  947.837062] Hello, world !

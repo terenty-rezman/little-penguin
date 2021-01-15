@@ -1,0 +1,1 @@
+ACTION=="add", ENV{ID_BUS}=="usb", ENV{ID_INPUT_KEYBOARD}=="?*", RUN+="/sbin/insmod /root/little-penguin/assignment_04/main.ko"
