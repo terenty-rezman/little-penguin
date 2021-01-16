@@ -1,8 +1,10 @@
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/uaccess.h>
 #include <linux/semaphore.h>
 #include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 static char foo_data[PAGE_SIZE] = { 0 };
 static size_t foo_data_len = 0;
@@ -89,22 +91,101 @@ static const struct file_operations foo_fops = {
 	.llseek = no_llseek,
 };
 
+static const char login[] = "mapryl";
+static const size_t login_size = ARRAY_SIZE(login);
+
+static int id_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%s\n", login);
+	return 0;
+}
+
+static int id_open(struct inode *inode, struct file *file)
+{
+	/* using seq_file interface */
+	return single_open(file, id_show, NULL);
+}
+
+static ssize_t id_write(struct file *file, const char __user *buf, size_t len,
+			loff_t *offset)
+{
+	char local_buf[login_size];
+	size_t trimmed_login_size;
+
+	if (len != login_size)
+		return -EINVAL;
+
+	if (copy_from_user(local_buf, buf, login_size))
+		return -EINVAL;
+
+	trimmed_login_size = login_size - 1; /* without trailing '\n' */
+
+	if (memcmp(local_buf, login, trimmed_login_size))
+		return -EINVAL;
+
+	return len;
+}
+
+static const struct file_operations id_fops = {
+	.owner = THIS_MODULE,
+	.open = id_open,
+	.read = seq_read,
+    .write = id_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int jiff_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%llu\n", get_jiffies_64());
+	return 0;
+}
+
+static int jiff_open(struct inode *inode, struct file *file)
+{
+	/* using seq_file interface */
+	return single_open(file, jiff_show, NULL);
+}
+
+static const struct file_operations jiff_fops = {
+	.owner = THIS_MODULE,
+	.open = jiff_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static struct dentry *debug_dir;
 
 int __init init_module(void)
 {
+	struct dentry *id_file;
+	struct dentry *jiff_file;
 	struct dentry *foo_file;
 
 	debug_dir = debugfs_create_dir("fortytwo", NULL);
 	if (IS_ERR(debug_dir))
 		return PTR_ERR(debug_dir);
 
-	foo_file = debugfs_create_file("foo", S_IWUSR | S_IROTH, debug_dir,
-				       NULL, &foo_fops);
-	if (IS_ERR(foo_file))
-		return PTR_ERR(foo_file);
+	id_file = debugfs_create_file("id", S_IWUGO | S_IRUGO, debug_dir, NULL, &id_fops);
+	if (IS_ERR(id_file)) {
+		debugfs_remove_recursive(debug_dir);
+		return PTR_ERR(id_file);
+	}
 
-	pr_info("test module loaded\n");
+	jiff_file = debugfs_create_file("jiffies", S_IRUGO, debug_dir, NULL, &jiff_fops);
+	if (IS_ERR(jiff_file)) {
+		debugfs_remove_recursive(debug_dir);
+		return PTR_ERR(jiff_file);
+	}
+
+	foo_file = debugfs_create_file("foo", S_IWUSR | S_IRUGO, debug_dir, NULL, &foo_fops);
+	if (IS_ERR(foo_file)) {
+		debugfs_remove_recursive(debug_dir);
+		return PTR_ERR(foo_file);
+	}
+
+	pr_info("debugfs_test module loaded\n");
 
 	return 0;
 }
@@ -112,7 +193,7 @@ int __init init_module(void)
 void __exit cleanup_module(void)
 {
 	debugfs_remove_recursive(debug_dir);
-	pr_info("test module unloaded\n");
+	pr_info("debugfs_test module unloaded\n");
 }
 
 MODULE_DESCRIPTION("debugfs test");

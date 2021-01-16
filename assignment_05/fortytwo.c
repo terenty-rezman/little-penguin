@@ -4,44 +4,51 @@
 #include <linux/module.h>
 #include <linux/uaccess.h>
 
-static const char login[] = "mapryl\n";
+static const char login[] = "mapryl";
 static const size_t login_size = ARRAY_SIZE(login);
 
-static ssize_t ft_read(struct file *file, char __user *buf, size_t len, loff_t *ppos)
+static ssize_t ft_read(struct file *file, char __user *buf, size_t len,
+		       loff_t *ppos)
 {
 	int read_len = *ppos >= login_size ? 0 : login_size - *ppos;
 	unsigned long not_copied_len = 0;
 
-	if(read_len < 0)
+	if (read_len < 0)
 		read_len = 0;
 
-	if(read_len) {
+	if (read_len) {
 		not_copied_len = copy_to_user(buf, login + *ppos, read_len);
 		*ppos += read_len;
 	}
-		
+
 	return read_len - not_copied_len;
 }
 
-static ssize_t ft_write(struct file *file, const char __user *buf, size_t len, loff_t *ppos)
+static ssize_t ft_write(struct file *file, const char __user *buf, size_t len,
+			loff_t *ppos)
 {
-	const size_t only_login_size = login_size - 1; // minus '\n' symbol
-	char local_buf[only_login_size];
-	
-	if(len != only_login_size)
+	char local_buf[login_size];
+	size_t trimmed_login_size;
+
+	if (len != login_size)
 		return -EINVAL;
 
-	if(copy_from_user(local_buf, buf, len))
+	if (copy_from_user(local_buf, buf, len))
+		return -EINVAL;
+	
+	trimmed_login_size = login_size - 1; /* minus trailing '\0' symbols */
+
+	if (memcmp(local_buf, login, trimmed_login_size))
 		return -EINVAL;
 
 	return len;
 }
 
 static const struct file_operations ft_fops = {
-	.owner		= THIS_MODULE,
-	.read		= ft_read,
-	.write		= ft_write,
-	.llseek 	= no_llseek,
+	.owner = THIS_MODULE,
+	.read = ft_read,
+	.write = ft_write,
+	.llseek = no_llseek,
 };
 
 struct miscdevice ft_device = {
