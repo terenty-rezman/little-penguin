@@ -130,7 +130,7 @@ static const struct file_operations id_fops = {
 	.owner = THIS_MODULE,
 	.open = id_open,
 	.read = seq_read,
-    .write = id_write,
+	.write = id_write,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -167,19 +167,22 @@ int __init init_module(void)
 	if (IS_ERR(debug_dir))
 		return PTR_ERR(debug_dir);
 
-	id_file = debugfs_create_file("id", S_IWUGO | S_IRUGO, debug_dir, NULL, &id_fops);
+	id_file = debugfs_create_file("id", S_IWUGO | S_IRUGO, debug_dir, NULL,
+				      &id_fops);
 	if (IS_ERR(id_file)) {
 		debugfs_remove_recursive(debug_dir);
 		return PTR_ERR(id_file);
 	}
 
-	jiff_file = debugfs_create_file("jiffies", S_IRUGO, debug_dir, NULL, &jiff_fops);
+	jiff_file = debugfs_create_file("jiffies", S_IRUGO, debug_dir, NULL,
+					&jiff_fops);
 	if (IS_ERR(jiff_file)) {
 		debugfs_remove_recursive(debug_dir);
 		return PTR_ERR(jiff_file);
 	}
 
-	foo_file = debugfs_create_file("foo", S_IWUSR | S_IRUGO, debug_dir, NULL, &foo_fops);
+	foo_file = debugfs_create_file("foo", S_IWUSR | S_IRUGO, debug_dir,
+				       NULL, &foo_fops);
 	if (IS_ERR(foo_file)) {
 		debugfs_remove_recursive(debug_dir);
 		return PTR_ERR(foo_file);

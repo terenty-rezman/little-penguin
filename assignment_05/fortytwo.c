@@ -35,7 +35,7 @@ static ssize_t ft_write(struct file *file, const char __user *buf, size_t len,
 
 	if (copy_from_user(local_buf, buf, len))
 		return -EINVAL;
-	
+
 	trimmed_login_size = login_size - 1; /* minus trailing '\0' symbols */
 
 	if (memcmp(local_buf, login, trimmed_login_size))
