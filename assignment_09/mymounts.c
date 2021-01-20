@@ -4,14 +4,47 @@
 #include <linux/module.h>
 #include <linux/seq_file.h>
 #include <linux/nsproxy.h>
-#include <../fs/mount.h>
+#include <linux/mount.h>
+#include <linux/namei.h>
+#include <linux/path.h>
+#include <linux/kallsyms.h>
+
+static struct vfsmount *(*kallsym_collect_mounts)(struct path *);
+static void (*kallsym_drop_collected_mounts)(struct vfsmount *) ;
+static int (*kallsym_iterate_mounts)(int (*)(struct vfsmount *, void *), void *, struct vfsmount *) ;
+
+static int print_mount(struct vfsmount *mnt, void *arg)
+{
+	struct seq_file *m = arg;
+	struct dentry *dentry;
+
+	dentry = mnt->mnt_root;
+
+	seq_printf(m, "%s\n", dentry->d_name.name);
+	return 0;
+}
 
 static int mymounts_show(struct seq_file *m, void *v)
 {
-	struct mount *mnt;
+	int err;
+	struct path root_path;
+	struct vfsmount *root_mnt;
 
-    mnt = current->nsproxy->mnt_ns->root;
-	seq_printf(m, "%s\n", mnt->mnt_devname);
+	err = kern_path("/", LOOKUP_FOLLOW, &root_path);
+	if (err) {
+		pr_err("mymounts: kern_path failed\n");
+		return 0;
+	}
+
+	root_mnt = kallsym_collect_mounts(&root_path);
+
+	kallsym_iterate_mounts(print_mount, m, root_mnt);
+
+	seq_printf(m, "%s\n", root_path.dentry->d_name.name);
+
+	kallsym_drop_collected_mounts(root_mnt);
+	path_put(&root_path);
+
 	return 0;
 }
 
@@ -43,6 +76,19 @@ static int __init mymounts_init(void)
 	if (error) {
 		pr_err("can't misc_register\n");
 		return error;
+	}
+
+	kallsym_collect_mounts = (void *)kallsyms_lookup_name("collect_mounts");
+	kallsym_drop_collected_mounts = (void *)kallsyms_lookup_name("drop_collected_mounts");
+	kallsym_iterate_mounts = (void *)kallsyms_lookup_name("iterate_mounts");
+
+	if (!kallsym_collect_mounts || 
+		!kallsym_drop_collected_mounts ||
+	    !kallsym_iterate_mounts) 
+	{
+		pr_err("mymounts: kallsyms_lookup_name failed\n");
+		misc_deregister(&ft_device);
+		return 1;
 	}
 
 	pr_info("ft loaded\n");
