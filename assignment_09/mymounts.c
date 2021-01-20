@@ -8,10 +8,11 @@
 #include <linux/namei.h>
 #include <linux/path.h>
 #include <linux/kallsyms.h>
+#include <linux/proc_fs.h>
 
 static struct vfsmount *(*kallsym_collect_mounts)(struct path *);
-static void (*kallsym_drop_collected_mounts)(struct vfsmount *) ;
-static int (*kallsym_iterate_mounts)(int (*)(struct vfsmount *, void *), void *, struct vfsmount *) ;
+static void (*kallsym_drop_collected_mounts)(struct vfsmount *);
+static int (*kallsym_iterate_mounts)(int (*)(struct vfsmount *, void *), void *, struct vfsmount *);
 
 static int print_mount(struct vfsmount *mnt, void *arg)
 {
@@ -40,8 +41,6 @@ static int mymounts_show(struct seq_file *m, void *v)
 
 	kallsym_iterate_mounts(print_mount, m, root_mnt);
 
-	seq_printf(m, "%s\n", root_path.dentry->d_name.name);
-
 	kallsym_drop_collected_mounts(root_mnt);
 	path_put(&root_path);
 
@@ -62,32 +61,24 @@ static const struct file_operations mymounts_fops = {
 	.release = single_release,
 };
 
-struct miscdevice ft_device = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "mymounts",
-	.fops = &mymounts_fops,
-};
-
 static int __init mymounts_init(void)
 {
-	int error;
+	struct proc_dir_entry *entry;
 
-	error = misc_register(&ft_device);
-	if (error) {
-		pr_err("can't misc_register\n");
-		return error;
+	entry = proc_create("mymounts", S_IRUSR, NULL, &mymounts_fops);
+	if (!entry) {
+		pr_err("Failed to create error_log proc entry\n");
+		return -ENOMEM;
 	}
 
 	kallsym_collect_mounts = (void *)kallsyms_lookup_name("collect_mounts");
 	kallsym_drop_collected_mounts = (void *)kallsyms_lookup_name("drop_collected_mounts");
 	kallsym_iterate_mounts = (void *)kallsyms_lookup_name("iterate_mounts");
 
-	if (!kallsym_collect_mounts || 
-		!kallsym_drop_collected_mounts ||
-	    !kallsym_iterate_mounts) 
-	{
+	if (!kallsym_collect_mounts || !kallsym_drop_collected_mounts ||
+	    !kallsym_iterate_mounts) {
 		pr_err("mymounts: kallsyms_lookup_name failed\n");
-		misc_deregister(&ft_device);
+		remove_proc_entry("mymounts", NULL);
 		return 1;
 	}
 
@@ -97,7 +88,7 @@ static int __init mymounts_init(void)
 
 static void __exit mymounts_exit(void)
 {
-	misc_deregister(&ft_device);
+	remove_proc_entry("mymounts", NULL);
 	pr_info("ft unloaded\n");
 }
 
